@@ -1,0 +1,46 @@
+services:
+  redis:
+    image: "redis:latest"
+    container_name: "redis_server"
+    restart: on-failure
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: job-workers-app:latest
+  
+  server:
+    image: job-workers-app:latest
+    command: ['./server-ex']
+    restart: on-failure
+    depends_on:
+      - redis
+      - builder
+    ports:
+      - "8080:3333"
+
+  scanner:
+    image: job-workers-app:latest
+    command: ['./scanner-ex']
+    restart: on-failure
+    depends_on:
+      - redis
+      - builder
+
+  worker:
+    image: job-workers-app:latest
+    command: ['./worker-ex']
+    restart: on-failure
+    depends_on:
+      - redis
+      - builder
+    deploy:
+      replicas: 3
+
+volumes:
+  redis_data:
+    driver: local
